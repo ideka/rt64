@@ -17,17 +17,21 @@ namespace RT64 {
     // VI
     
     // Set from the game's thread, read when presenting.
-    static std::atomic<float> overscanCrop = 0.0f;
+    static std::atomic<float> overscanCropFraction = 0.0f;
 
     void VI::setOverscanCrop(float fraction) {
-        overscanCrop = std::clamp(fraction, 0.0f, 0.25f);
+        overscanCropFraction = std::clamp(fraction, 0.0f, 0.25f);
+    }
+
+    float VI::overscanCrop() {
+        return overscanCropFraction;
     }
 
     hlslpp::float4 VI::viewRectangle() const {
         // Scale the picture up around its centre so the cropped fraction on each side falls outside
         // the visible area (the crop rectangle stays the full screen).
-        const float scale = 1.0f / (1.0f - 2.0f * overscanCrop);
-        const float offset = -overscanCrop * scale;
+        const float scale = 1.0f / (1.0f - 2.0f * overscanCropFraction);
+        const float offset = -overscanCropFraction * scale;
         return { offset, offset, scale, scale };
     }
 

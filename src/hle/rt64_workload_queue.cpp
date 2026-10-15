@@ -7,6 +7,7 @@
 #include "common/rt64_thread.h"
 
 #include "rt64_present_queue.h"
+#include "rt64_vi.h"
 
 #define ENABLE_HIGH_RESOLUTION_RENDERER 1
 
@@ -137,7 +138,13 @@ namespace RT64 {
         switch (ratioMode) {
         case UserConfiguration::AspectRatio::Expand:
             if ((ext.sharedResources->swapChainWidth > 0) && (ext.sharedResources->swapChainHeight > 0)) {
-                const float derivedRatioTarget = float(ext.sharedResources->swapChainWidth) / float(ext.sharedResources->swapChainHeight);
+                // The overscan crop zooms the picture by 1 / (1 - 2 * crop). Render it so that, once zoomed, it
+                // overflows the window on each side by the same amount it would on a 4:3 screen: the sides lose
+                // as much as the top and bottom do, and edge-anchored HUD keeps the same distance to the edge at
+                // any window width.
+                const float windowRatio = float(ext.sharedResources->swapChainWidth) / float(ext.sharedResources->swapChainHeight);
+                const float crop = VI::overscanCrop();
+                const float derivedRatioTarget = windowRatio * (1.0f - 2.0f * crop) + 2.0f * crop * workloadConfig.aspectRatioSource;
                 workloadConfig.aspectRatioTarget = std::max(derivedRatioTarget, workloadConfig.aspectRatioSource);
             }
             else {

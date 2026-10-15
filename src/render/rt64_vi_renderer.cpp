@@ -121,5 +121,11 @@ namespace RT64 {
 
         viewport = RenderViewport(topLeftViewport.x, topLeftViewport.y, bottomRightViewport.x - topLeftViewport.x, bottomRightViewport.y - topLeftViewport.y);
         scissor = RenderRect(lround(topLeftScissor.x), lround(topLeftScissor.y), lround(bottomRightScissor.x), lround(bottomRightScissor.y));
+
+        // A picture rendered wider than the VI's own aspect ratio (Expand) was sized for the window with the
+        // overscan crop in mind (see WorkloadQueue::threadConfigurationUpdate), so the window clips it.
+        if ((VI::overscanCrop() > 0.0f) && (resolutionScale.x > resolutionScale.y * 1.001f)) {
+            scissor = RenderRect(0, 0, int32_t(windowSize.x), int32_t(windowSize.y));
+        }
     }
 };

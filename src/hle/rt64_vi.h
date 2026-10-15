@@ -152,6 +152,7 @@ namespace RT64 {
         // that draw a black border meant to be hidden by a CRT's overscan can set this to zoom it out
         // of view uniformly.
         static void setOverscanCrop(float fraction);
+        static float overscanCrop();
         float gamma() const;
         bool compatibleWith(const VI &vi) const;
         bool visible() const;
