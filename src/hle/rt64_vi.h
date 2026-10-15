@@ -147,6 +147,11 @@ namespace RT64 {
         float yOffsetFloat() const;
         hlslpp::float4 viewRectangle() const;
         hlslpp::float4 cropRectangle() const;
+
+        // Fraction of the picture hidden on each side as TV overscan (0 to show everything). Games
+        // that draw a black border meant to be hidden by a CRT's overscan can set this to zoom it out
+        // of view uniformly.
+        static void setOverscanCrop(float fraction);
         float gamma() const;
         bool compatibleWith(const VI &vi) const;
         bool visible() const;

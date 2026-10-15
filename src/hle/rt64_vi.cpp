@@ -3,6 +3,7 @@
 //
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <memory.h>
 #include <stdio.h>
@@ -15,8 +16,19 @@
 namespace RT64 {
     // VI
     
+    // Set from the game's thread, read when presenting.
+    static std::atomic<float> overscanCrop = 0.0f;
+
+    void VI::setOverscanCrop(float fraction) {
+        overscanCrop = std::clamp(fraction, 0.0f, 0.25f);
+    }
+
     hlslpp::float4 VI::viewRectangle() const {
-        return { 0.0f, 0.0f, 1.0f, 1.0f };
+        // Scale the picture up around its centre so the cropped fraction on each side falls outside
+        // the visible area (the crop rectangle stays the full screen).
+        const float scale = 1.0f / (1.0f - 2.0f * overscanCrop);
+        const float offset = -overscanCrop * scale;
+        return { offset, offset, scale, scale };
     }
 
     hlslpp::float4 VI::cropRectangle() const {
