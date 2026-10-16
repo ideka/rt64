@@ -62,6 +62,13 @@ namespace RT64 {
         rdp = std::make_unique<RDP>(this);
 
         reset();
+
+        // Allow dumping textures from the start without the debugger UI, e.g. for building texture packs.
+        const char *dumpDirectory = getenv("RT64_DUMP_TEXTURES");
+        if ((dumpDirectory != nullptr) && (dumpDirectory[0] != '\0')) {
+            dumpingTexturesDirectory = std::filesystem::u8path(dumpDirectory);
+            std::filesystem::create_directories(dumpingTexturesDirectory);
+        }
     }
 
     State::~State() { }
