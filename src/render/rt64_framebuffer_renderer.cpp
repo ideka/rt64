@@ -85,7 +85,9 @@ namespace RT64 {
         }
     }
     
-    RenderViewport convertViewportRect(FixedRect rect, hlslpp::float2 resScale, int32_t fbWidth, float aspectRatioScale, float extOriginPercentage, float horizontalMisalignment, uint16_t leftOrigin, uint16_t rightOrigin) {
+    // With exact, the rectangle keeps the fraction of a pixel its 10.2 coordinates have (instead of starting on
+    // the next whole pixel), so it can move by less than a pixel at higher resolutions.
+    RenderViewport convertViewportRect(FixedRect rect, hlslpp::float2 resScale, int32_t fbWidth, float aspectRatioScale, float extOriginPercentage, float horizontalMisalignment, uint16_t leftOrigin, uint16_t rightOrigin, bool exact = false) {
         auto computeOrigin = [=](uint16_t origin) {
             if (origin < G_EX_ORIGIN_NONE) {
                 return ((fbWidth * origin) / G_EX_ORIGIN_RIGHT) * extOriginPercentage + (fbWidth / 2) * (1.0f - extOriginPercentage);
@@ -110,6 +112,13 @@ namespace RT64 {
         float bottom = std::round(rect.bottom(true) * resScale.y);
         left = correctMisalignment(left, leftOrigin);
         right = correctMisalignment(right, rightOrigin);
+        if (exact) {
+            left += (rect.ulx / 4.0f - rect.left(true)) * aspectRatioScale * resScale.x;
+            right += (rect.lrx / 4.0f - rect.right(true)) * aspectRatioScale * resScale.x;
+            top += (rect.uly / 4.0f - rect.top(true)) * resScale.y;
+            bottom += (rect.lry / 4.0f - rect.bottom(true)) * resScale.y;
+        }
+
         return RenderViewport(left, top, right - left, bottom - top);
     }
 
@@ -1652,7 +1661,9 @@ namespace RT64 {
                                 horizontalMisalignment = p.horizontalMisalignment;
                             }
 
-                            RenderViewport viewportRect = convertViewportRect(call.callDesc.rect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, horizontalMisalignment, call.callDesc.rectLeftOrigin, call.callDesc.rectRightOrigin);
+                            // Rectangles forced to upscale are drawn at their exact (sub-pixel) position too.
+                            const bool exactRect = call.callDesc.extendedFlags.forceUpscale2D;
+                            RenderViewport viewportRect = convertViewportRect(call.callDesc.rect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, horizontalMisalignment, call.callDesc.rectLeftOrigin, call.callDesc.rectRightOrigin, exactRect);
                             triangles.screenScale = { viewportRect.width / framebuffer.viewport.width, viewportRect.height / framebuffer.viewport.height };
                             triangles.screenOffset.x = halfPixelOffset.x + ((viewportRect.x + viewportRect.width / 2.0f) - halfViewportSize.x) / halfViewportSize.x;
                             triangles.screenOffset.y = halfPixelOffset.y + (halfViewportSize.y - (viewportRect.y + viewportRect.height / 2.0f)) / halfViewportSize.y;
