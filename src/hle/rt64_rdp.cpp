@@ -1258,13 +1258,16 @@ namespace RT64 {
         triPosFloats.insert(triPosFloats.end(), rectPosFloats, rectPosFloats + std::size(rectPosFloats));
         triColorFloats.insert(triColorFloats.end(), rectColorFloats, rectColorFloats + std::size(rectColorFloats));
 
-        const int32_t rectWidth = drawRect.width(true, true);
-        const int32_t rectHeight = drawRect.height(true, true);
-        const int32_t uvWidth = (flip ? rectHeight : rectWidth) << 2;
-        const int32_t uvHeight = (flip ? rectWidth : rectHeight) << 2;
+        // Rectangles forced to upscale are drawn at their exact sub-pixel position and size (see
+        // convertViewportRect), so their texture spans that exact size and starts on their first line.
+        const bool exactRect = extended.drawExtendedFlags.forceUpscale2D;
+        const int32_t rectWidth = exactRect ? (drawRect.lrx - drawRect.ulx) : (drawRect.width(true, true) << 2);
+        const int32_t rectHeight = exactRect ? (drawRect.lry - drawRect.uly) : (drawRect.height(true, true) << 2);
+        const int32_t uvWidth = flip ? rectHeight : rectWidth;
+        const int32_t uvHeight = flip ? rectWidth : rectHeight;
         const int32_t lrs = ((uls << 7) + dsdx * uvWidth) >> 7;
         const int32_t lrt = ((ult << 7) + dtdy * uvHeight) >> 7;
-        const float vFractionOffset = (uly & 0x3) ? (dtdy >> 5) / 32.0f : 0.0f;
+        const float vFractionOffset = ((uly & 0x3) && !exactRect) ? (dtdy >> 5) / 32.0f : 0.0f;
         float u1 = uls / 32.0f;
         float v1 = ult / 32.0f + vFractionOffset;
         float u2 = lrs / 32.0f;
