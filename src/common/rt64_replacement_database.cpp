@@ -355,6 +355,10 @@ namespace RT64 {
         if (texture.shift != defaultTexture.shift) {
             j["shift"] = texture.shift;
         }
+
+        if (texture.cutout) {
+            j["cutout"] = true;
+        }
     }
 
     void from_json(const json &j, ReplacementTexture &texture) {
@@ -363,6 +367,7 @@ namespace RT64 {
         texture.hashes = j.value("hashes", defaultTexture.hashes);
         texture.operation = j.value("operation", defaultTexture.operation);
         texture.shift = j.value("shift", defaultTexture.shift);
+        texture.cutout = j.value("cutout", defaultTexture.cutout);
     }
 
     void to_json(json &j, const ReplacementOperationFilter &operationFilter) {

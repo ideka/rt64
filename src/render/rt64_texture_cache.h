@@ -220,6 +220,7 @@ namespace RT64 {
         uint64_t streamLoadCount = 0;
         TextureMap textureMap;
         std::mutex textureMapMutex;
+        std::unordered_map<uint64_t, bool> cutoutHashes; // Guarded by textureMapMutex.
         RenderWorker *directWorker;
         RenderWorker *copyWorker;
         std::unique_ptr<RenderCommandList> loaderCommandList;
@@ -243,6 +244,8 @@ namespace RT64 {
         void clearReplacementDirectories();
         void reloadReplacements(bool clearQueue, uint64_t exclusiveDbHash = 0);
         bool loadReplacementDirectory(const ReplacementDirectory &replacementDirectory);
+        // Whether the loaded packs mark the replacement for this hash as a cutout (ReplacementTexture::cutout).
+        bool isCutout(uint64_t hash);
         bool loadReplacementDirectories(const std::vector<ReplacementDirectory> &replacementDirectories);
         bool saveReplacementDatabase();
         void setReplacementDefaultShift(ReplacementShift shift);

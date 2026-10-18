@@ -73,6 +73,10 @@ namespace RT64 {
         ReplacementHashes hashes;
         ReplacementOperation operation = ReplacementOperation::Auto;
         ReplacementShift shift = ReplacementShift::Auto;
+        // The replacement's transparency is a cutout (texels are either opaque or fully transparent) that
+        // must show even where the original texture was opaque and the game draws it without alpha
+        // (the draw then discards the transparent texels).
+        bool cutout = false;
 
         bool isEmpty() const {
             return hashes.rt64.empty();

@@ -259,6 +259,7 @@ namespace RT64 {
                     gpuTile.flags.fromCopy = true;
                     gpuTile.flags.rawTMEM = false;
                     gpuTile.flags.hasMipmaps = false;
+                    gpuTile.flags.cutout = false;
                 }
             }
             else {
@@ -281,6 +282,7 @@ namespace RT64 {
                 gpuTile.flags.rawTMEM = !textureReplaced && callTile.rawTMEM;
                 gpuTile.flags.hasMipmaps = hasMipmaps;
                 gpuTile.flags.shiftedByHalf = shiftedByHalf;
+                gpuTile.flags.cutout = textureReplaced && textureCache->isCutout(callTile.tmemHashOrID);
             }
         }
     }

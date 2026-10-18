@@ -1317,6 +1317,12 @@ namespace RT64 {
         return textureMap.use(hash, submissionFrame, textureIndex, textureScale, textureDimensions, textureReplaced, hasMipmaps, shiftedByHalf);
     }
 
+    bool TextureCache::isCutout(uint64_t hash) {
+        std::unique_lock lock(textureMapMutex);
+        auto it = cutoutHashes.find(hash);
+        return (it != cutoutHashes.end()) && it->second;
+    }
+
     bool TextureCache::useTexture(uint64_t hash, uint64_t submissionFrame, uint32_t &textureIndex) {
         interop::float2 textureScale;
         interop::float3 textureDimensions;
@@ -1407,6 +1413,11 @@ namespace RT64 {
     }
 
     void TextureCache::clearReplacementDirectories() {
+        {
+            std::unique_lock lock(textureMapMutex);
+            cutoutHashes.clear();
+        }
+
         // Wait for the streaming threads to be finished.
         waitForAllStreamThreads(true);
 
@@ -1518,6 +1529,11 @@ namespace RT64 {
                         db = json::parse(databaseBytes.begin(), databaseBytes.end(), nullptr, true);
 
                         if (db.config.hashVersion <= TMEMHasher::CurrentHashVersion) {
+                            // Packs are loaded from the lowest priority up: later ones decide.
+                            for (const ReplacementTexture &texture : db.textures) {
+                                cutoutHashes[ReplacementDatabase::stringToHash(texture.hashes.rt64)] = texture.cutout;
+                            }
+
                             db.resolvePaths(fileSystems[i].get(), uint32_t(i), fileSystemResolvedPaths[i], false, nullptr, &fileSystemStreamSets[i]);
                             fileSystemHashVersions[i] = db.config.hashVersion;
                             knownHashVersions.insert(db.config.hashVersion);

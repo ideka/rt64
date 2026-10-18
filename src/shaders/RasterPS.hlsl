@@ -124,6 +124,8 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
 
     float4 texVal0 = float4(0.0f, 0.0f, 0.0f, 1.0f);
     float4 texVal1 = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    // Replacements marked as cutouts are transparent where their texels are, even if the draw uses no alpha.
+    bool cutoutDiscard = false;
     if (renderFlagUsesTexture0(rp.flags)) {
         const uint globalTileIndex = instanceRenderIndices[gConstants.renderIndex].rdpTileIndex + tileIndex0;
         RDPTile rdpTile = RDPTiles[globalTileIndex];
@@ -136,6 +138,7 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
         const GPUTile gpuTile = GPUTiles[globalTileIndex];
         const float2 textureUV = gpuTileFlagHighRes(gpuTile.flags) ? vertexUV : lowResUV;
         texVal0 = sampleTexture(otherMode, rp.flags, textureUV, ddx(vertexUV), ddy(vertexUV), rdpTile, gpuTile, false);
+        cutoutDiscard = cutoutDiscard || (gpuTileFlagCutout(gpuTile.flags) && (texVal0.a < 0.5f));
     }
     
     if (renderFlagUsesTexture1(rp.flags)) {
@@ -152,6 +155,11 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
         const float2 textureUV = gpuTileFlagHighRes(gpuTile.flags) ? vertexUV : lowResUV;
         const uint nativeSampler = renderFlagNativeSampler1(rp.flags);
         texVal1 = sampleTexture(otherMode, rp.flags, textureUV, ddx(vertexUV), ddy(vertexUV), rdpTile, gpuTile, oneCycleHardwareBug);
+        cutoutDiscard = cutoutDiscard || (gpuTileFlagCutout(gpuTile.flags) && (texVal1.a < 0.5f));
+    }
+
+    if (cutoutDiscard) {
+        return false;
     }
     
     // Color combiner.
