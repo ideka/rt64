@@ -75,7 +75,7 @@ namespace RT64 {
         ReplacementShift shift = ReplacementShift::Auto;
         // The replacement's transparency is a cutout (texels are either opaque or fully transparent) that
         // must show even where the original texture was opaque and the game draws it without alpha
-        // (the draw then discards the transparent texels).
+        // (the draw then keeps only its fully opaque texels).
         bool cutout = false;
 
         bool isEmpty() const {
