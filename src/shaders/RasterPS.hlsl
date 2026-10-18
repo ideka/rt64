@@ -120,7 +120,26 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
         lodScale = FbParams.resolutionScale.y;
     }
     
-    computeLOD(otherMode, instanceRenderIndices[gConstants.renderIndex].rdpTileCount, instanceRDPParams[instanceIndex].primLOD, lodScale, ddxuvx, ddyuvy, tileIndex0, tileIndex1, lodFraction);
+    // Anisotropic filtering: where the texture is stretched across the pixel (surfaces seen at a glancing
+    // angle), average several samples along the footprint's long axis, each with the level of detail of
+    // the short axis, instead of one sample that either aliases or blurs. The footprint is measured like
+    // the level of detail is (at the original resolution unless the LOD is upscaled).
+    const float2 uvDdx = ddx(vertexUV);
+    const float2 uvDdy = ddy(vertexUV);
+    uint anisoSamples = 1;
+    float2 anisoAxis = float2(0.0f, 0.0f);
+    if ((FbParams.maxAnisotropy > 1) && !renderFlagRect(rp.flags)) {
+        const float lengthX = length(uvDdx) * lodScale;
+        const float lengthY = length(uvDdy) * lodScale;
+        const float majorLength = max(lengthX, lengthY);
+        const float minorLength = min(lengthX, lengthY);
+        if (majorLength > 1.0f) {
+            anisoSamples = uint(clamp(ceil(majorLength / max(minorLength, 1.0f)), 1.0f, float(FbParams.maxAnisotropy)));
+            anisoAxis = (lengthX > lengthY) ? uvDdx : uvDdy;
+        }
+    }
+
+    computeLOD(otherMode, instanceRenderIndices[gConstants.renderIndex].rdpTileCount, instanceRDPParams[instanceIndex].primLOD, lodScale, ddxuvx / anisoSamples, ddyuvy / anisoSamples, tileIndex0, tileIndex1, lodFraction);
 
     float4 texVal0 = float4(0.0f, 0.0f, 0.0f, 1.0f);
     float4 texVal1 = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -140,7 +159,13 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
         
         const GPUTile gpuTile = GPUTiles[globalTileIndex];
         const float2 textureUV = gpuTileFlagHighRes(gpuTile.flags) ? vertexUV : lowResUV;
-        texVal0 = sampleTexture(otherMode, rp.flags, textureUV, ddx(vertexUV), ddy(vertexUV), rdpTile, gpuTile, false);
+        texVal0 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        [loop]
+        for (uint s = 0; s < anisoSamples; s++) {
+            const float2 offset = anisoAxis * ((s + 0.5f) / anisoSamples - 0.5f);
+            texVal0 += sampleTexture(otherMode, rp.flags, textureUV + offset, uvDdx / anisoSamples, uvDdy / anisoSamples, rdpTile, gpuTile, false);
+        }
+        texVal0 /= anisoSamples;
         cutoutDiscard = cutoutDiscard || (gpuTileFlagCutout(gpuTile.flags) && (texVal0.a < 0.5f));
     }
     
@@ -156,8 +181,13 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
         
         const GPUTile gpuTile = GPUTiles[globalTileIndex];
         const float2 textureUV = gpuTileFlagHighRes(gpuTile.flags) ? vertexUV : lowResUV;
-        const uint nativeSampler = renderFlagNativeSampler1(rp.flags);
-        texVal1 = sampleTexture(otherMode, rp.flags, textureUV, ddx(vertexUV), ddy(vertexUV), rdpTile, gpuTile, oneCycleHardwareBug);
+        texVal1 = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        [loop]
+        for (uint s = 0; s < anisoSamples; s++) {
+            const float2 offset = anisoAxis * ((s + 0.5f) / anisoSamples - 0.5f);
+            texVal1 += sampleTexture(otherMode, rp.flags, textureUV + offset, uvDdx / anisoSamples, uvDdy / anisoSamples, rdpTile, gpuTile, oneCycleHardwareBug);
+        }
+        texVal1 /= anisoSamples;
         cutoutDiscard = cutoutDiscard || (gpuTileFlagCutout(gpuTile.flags) && (texVal1.a < 0.5f));
     }
 

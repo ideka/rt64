@@ -3,6 +3,9 @@
 //
 
 #include "rt64_framebuffer_renderer.h"
+#include "rt64_texture_filtering.h"
+
+#include <atomic>
 
 #include "../include/rt64_extended_gbi.h"
 
@@ -50,6 +53,16 @@ namespace interop {
 };
 
 namespace RT64 {
+    static std::atomic<uint32_t> maxAnisotropySamples = 1;
+
+    void setMaxAnisotropy(uint32_t samples) {
+        maxAnisotropySamples = std::clamp(samples, 1U, 16U);
+    }
+
+    uint32_t getMaxAnisotropy() {
+        return maxAnisotropySamples;
+    }
+
     // Helper functions.
     
     RenderRect convertFixedRect(FixedRect rect, hlslpp::float2 resScale, int32_t fbWidth, float aspectRatioScale, float extOriginPercentage, int32_t horizontalMisalignment, uint16_t leftOrigin, uint16_t rightOrigin) {
@@ -1336,6 +1349,7 @@ namespace RT64 {
         fbParams.resolution = { p.targetWidth / p.resolutionScale.x, p.targetHeight / p.resolutionScale.y };
         fbParams.resolutionScale = p.resolutionScale;
         fbParams.horizontalMisalignment = p.horizontalMisalignment;
+        fbParams.maxAnisotropy = getMaxAnisotropy();
         framebufferCount++;
 
         while (framebufferCount > framebufferVector.size()) {
