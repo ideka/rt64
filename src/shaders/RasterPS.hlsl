@@ -146,7 +146,8 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
     // Replacements marked as cutouts are transparent where their texels are, even if the draw uses no alpha.
     // Filtering across the edge of a wrapping texture blends in its opposite side; at half the threshold that reaches
     // less than half a texel of the replacement either way (texture packs should not shift cutouts by half a texel,
-    // which would make it half a texel of the original).
+    // which would make it half a texel of the original). Keyed textures (pure black texels transparent) are discarded
+    // the same way.
     bool cutoutDiscard = false;
     if (renderFlagUsesTexture0(rp.flags)) {
         const uint globalTileIndex = instanceRenderIndices[gConstants.renderIndex].rdpTileIndex + tileIndex0;
@@ -166,7 +167,7 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
             texVal0 += sampleTexture(otherMode, rp.flags, textureUV + offset, uvDdx / anisoSamples, uvDdy / anisoSamples, rdpTile, gpuTile, false);
         }
         texVal0 /= anisoSamples;
-        cutoutDiscard = cutoutDiscard || (gpuTileFlagCutout(gpuTile.flags) && (texVal0.a < 0.5f));
+        cutoutDiscard = cutoutDiscard || ((gpuTileFlagCutout(gpuTile.flags) || gpuTileFlagKeyed(gpuTile.flags)) && (texVal0.a < 0.5f));
     }
     
     if (renderFlagUsesTexture1(rp.flags)) {
@@ -188,7 +189,7 @@ LIBRARY_EXPORT bool RasterPS(const RenderParams rp, float4 vertexPosition, float
             texVal1 += sampleTexture(otherMode, rp.flags, textureUV + offset, uvDdx / anisoSamples, uvDdy / anisoSamples, rdpTile, gpuTile, oneCycleHardwareBug);
         }
         texVal1 /= anisoSamples;
-        cutoutDiscard = cutoutDiscard || (gpuTileFlagCutout(gpuTile.flags) && (texVal1.a < 0.5f));
+        cutoutDiscard = cutoutDiscard || ((gpuTileFlagCutout(gpuTile.flags) || gpuTileFlagKeyed(gpuTile.flags)) && (texVal1.a < 0.5f));
     }
 
     if (cutoutDiscard) {

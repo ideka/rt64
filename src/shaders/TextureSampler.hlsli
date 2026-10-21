@@ -185,6 +185,17 @@ float4 sampleTextureLevel(const RDPTile rdpTile, const GPUTile gpuTile, bool fil
 #endif
     }
     
+    // Keyed textures: pure black texels are transparent and the rest opaque, whatever the texture's own alpha,
+    // before filtering (see RasterPS).
+    if (gpuTileFlagKeyed(gpuTile.flags)) {
+        samples[0].a = all(samples[0].rgb == 0.0f) ? 0.0f : 1.0f;
+        if (filtering) {
+            samples[1].a = all(samples[1].rgb == 0.0f) ? 0.0f : 1.0f;
+            samples[2].a = all(samples[2].rgb == 0.0f) ? 0.0f : 1.0f;
+            samples[3].a = all(samples[3].rgb == 0.0f) ? 0.0f : 1.0f;
+        }
+    }
+
     float4 sample00 = samples[0];
     if (filtering) {
         float2 fracPart = uvCoord - texelBaseInt;

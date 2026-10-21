@@ -6,6 +6,8 @@
 #include "rt64_texture_filtering.h"
 
 #include <atomic>
+#include <mutex>
+#include <unordered_set>
 
 #include "../include/rt64_extended_gbi.h"
 
@@ -61,6 +63,24 @@ namespace RT64 {
 
     uint32_t getMaxAnisotropy() {
         return maxAnisotropySamples;
+    }
+
+    static std::mutex keyedTexturesMutex;
+    static std::unordered_set<uint64_t> keyedTextures;
+
+    void setKeyedTexture(uint64_t hash, bool keyed) {
+        std::scoped_lock lock(keyedTexturesMutex);
+        if (keyed) {
+            keyedTextures.insert(hash);
+        }
+        else {
+            keyedTextures.erase(hash);
+        }
+    }
+
+    bool isKeyedTexture(uint64_t hash) {
+        std::scoped_lock lock(keyedTexturesMutex);
+        return keyedTextures.find(hash) != keyedTextures.end();
     }
 
     // Helper functions.
@@ -273,6 +293,7 @@ namespace RT64 {
                     gpuTile.flags.rawTMEM = false;
                     gpuTile.flags.hasMipmaps = false;
                     gpuTile.flags.cutout = false;
+                    gpuTile.flags.keyed = false;
                 }
             }
             else {
@@ -296,6 +317,7 @@ namespace RT64 {
                 gpuTile.flags.hasMipmaps = hasMipmaps;
                 gpuTile.flags.shiftedByHalf = shiftedByHalf;
                 gpuTile.flags.cutout = textureReplaced && textureCache->isCutout(callTile.tmemHashOrID);
+                gpuTile.flags.keyed = !textureReplaced && isKeyedTexture(callTile.tmemHashOrID);
             }
         }
     }

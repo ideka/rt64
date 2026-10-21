@@ -19,6 +19,7 @@ namespace interop {
             uint hasMipmaps : 1;
             uint shiftedByHalf : 1;
             uint cutout : 1;
+            uint keyed : 1;
         };
 
         uint value;
@@ -53,6 +54,10 @@ namespace interop {
 
     bool gpuTileFlagCutout(GPUTileFlags flags) {
         return flags & 0x40;
+    }
+
+    bool gpuTileFlagKeyed(GPUTileFlags flags) {
+        return flags & 0x80;
     }
 #endif
     struct GPUTile {
